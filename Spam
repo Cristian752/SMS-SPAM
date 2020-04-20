@@ -1,0 +1,137 @@
+#Se importan las librerias
+
+import pandas as pd
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+import sklearn.metrics as me
+
+# Se obtiene la informacion de los mensajes de spam y no spam de la pagina.
+# https://archive.ics.uci.edu/ml/datasets/SMS+Spam+Collection.
+# En mi caso se descargan los archivos y se ejecuta desde la parte local
+
+df = pd.read_table('C:/Users/Cristian Toro/Desktop/Taller Navy Bayes/Taller Spam/SMSSpamCollection', 
+                   sep='\t', 
+                   names=['label','sms_message'])
+
+df.head()
+# Se visualizan las 5 primeras filas
+
+
+label	sms_message
+0	ham	Go until jurong point, crazy.. Available only ...
+1	ham	Ok lar... Joking wif u oni...
+2	spam	Free entry in 2 a wkly comp to win FA Cup fina...
+3	ham	U dun say so early hor... U c already then say...
+4	ham	Nah I don't think he goes to usf, he lives aro...
+
+# Se deben convertir los datos a numeros.
+# Ya que la libreria Sci-Kit solo trabaja con numeros enteros.
+
+df['label'] = df.label.map({'ham':0, 'spam':1})
+
+# Se definen palabras como ejemplo.
+documents = ['Hello, how are you!',
+                'Win money, win from home.',
+                'Call me now.',
+                'Hello, Call hello you tomorrow?']
+
+
+# Inicializamos un contador de vectorizacion para convertir los ejemplos en una matriz de numeros enteros
+count_vector = CountVectorizer()
+
+#Con la funcion fit() hacemos que el contador se ajuste a nuestros ejemplos y despues imprimimos los nombres
+count_vector.fit(documents)
+names = count_vector.get_feature_names()
+names
+
+['are',
+ 'call',
+ 'from',
+ 'hello',
+ 'home',
+ 'how',
+ 'me',
+ 'money',
+ 'now',
+ 'tomorrow',
+ 'win',
+ 'you']
+ 
+ #Ya que la libreria solo trabaja con enteros, se realiza la transformacion para poder ser mostrandos en una matriz.
+doc_array = count_vector.transform(documents).toarray()
+doc_array
+
+array([[1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1],
+       [0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 2, 0],
+       [0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0],
+       [0, 1, 0, 2, 0, 0, 0, 0, 0, 1, 0, 1]], dtype=int64)
+       
+       # Se convertimos los datos en una estructura de datos donde nombramos las columnas
+frequency_matrix = pd.DataFrame(data=doc_array, columns=names)
+frequency_matrix
+
+	are	call	from	hello	home	how	me	money	now	tomorrow	win	you
+0	1	0	0	1	0	1	0	0	0	0	0	1
+1	0	0	1	0	1	0	0	1	0	0	2	0
+2	0	1	0	0	0	0	1	0	1	0	0	0
+3	0	1	0	2	0	0	0	0	0	1	0	1
+
+#La informacion que tenemos se debe dividir en 2 grupos.
+#Para hacer el entrenamiento del algoritmo y realizar las pruebas.
+
+X_train, X_test, y_train, y_test = train_test_split(df['sms_message'], df['label'], random_state=1)
+print('Numero de filas total en el set: {}'.format(df.shape[0]))
+print('Numero de filas en el set de entrenamiento: {}'.format(X_train.shape[0]))
+print('Numero de filas en el set de pruebas: {}'.format(X_test.shape[0]))
+
+Numero de filas total en el set: 5572
+Numero de filas en el set de entrenamiento: 4179
+Numero de filas en el set de pruebas: 1393
+
+# Organizamos nuestros datos de entrenamiento y datos de prueba.
+# En el formato que tenemos nuestros datos de ejemplo.
+
+count_vector = CountVectorizer()
+training_data = count_vector.fit_transform(X_train)
+testing_data = count_vector.transform(X_test)
+
+# Ajustamos los datos de entrenamiento para valores nominales. 
+# Ya que el Navie Bayes gausiano es más adecuado para valores continuos
+
+naive_bayes = MultinomialNB()
+naive_bayes.fit(training_data, y_train)
+
+MultinomialNB(alpha=1.0, class_prior=None, fit_prior=True)
+
+# Se realizan pruebas con los datos asignados.
+
+predictions = naive_bayes.predict(testing_data)
+
+# Al realizar las pruebas vamos se evalua con las metricas disponibles en la libreria.
+# Exactitus
+# Precision
+# Sensibilidad
+# Puntuacion F1
+
+print('Exactitud: ', format(me.accuracy_score(y_test, predictions)))
+print('Precision: ', format(me.precision_score(y_test, predictions)))
+print('Sensibilidad: ', format(me.recall_score(y_test, predictions)))
+print('Puntuacion F1: ', format(me.f1_score(y_test, predictions)))
+
+Exactitud:  0.9885139985642498
+Precision:  0.9720670391061452
+Sensibilidad:  0.9405405405405406
+Puntuacion F1:  0.9560439560439562
+
+# Al comprobar que nuestro algoritmo funciona correctamente y presenta un alto grado de fiabilidad 
+# procedemos a comprobarlo con nuestro ejemplo
+
+procedemos a comprobarlo con nuestro ejemplo
+predictions = naive_bayes.predict(count_vector.transform(documents))
+print(predictions)
+
+[0 0 0 0]
+
+# Podemos observar que nuestro algoritmo aun presenta fallas. 
+# Dado a que el mensaje en la fila 1 deberia retornar resultado  1 = spam
